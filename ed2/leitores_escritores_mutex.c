@@ -10,6 +10,7 @@
 
 pthread_mutex_t lock_bd = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t lock_nl = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t lock_eu = PTHREAD_MUTEX_INITIALIZER;
 
 int num_leitores = 0;
 
@@ -44,18 +45,20 @@ int main() {
 void * reader(void *arg) {
 	int i = *((int *) arg);
 	while(TRUE) {               /* repere para sempre */
-                 pthread_mutex_lock(&lock_nl);
-			 num_leitores++;
-		         if(num_leitores == 1){
-		             pthread_mutex_lock(&lock_bd);
-		         }
-                 pthread_mutex_unlock(&lock_nl);
+				 pthread_mutex_lock(&lock_eu); // este lock trava os leitores ou os escritores
+					pthread_mutex_lock(&lock_nl);
+				num_leitores++;
+					if(num_leitores == 1){
+						pthread_mutex_lock(&lock_bd);
+					}
+					pthread_mutex_unlock(&lock_nl);
+				pthread_mutex_unlock(&lock_eu);
 
                  read_data_base(i);       /* acesso aos dados */
 		 
                  pthread_mutex_lock(&lock_nl);
 		         num_leitores--;
-		         if(num_leitores == 0){ 
+		         if(num_leitores <= (NL / 2)){ 
 		             pthread_mutex_unlock(&lock_bd);
 		         }
                  pthread_mutex_unlock(&lock_nl);
@@ -68,9 +71,13 @@ void * writer(void *arg) {
 	int i = *((int *) arg);
 	while(TRUE) {               /* repete para sempre */
 		 think_up_data(i);        /* região não crítica */
-                 pthread_mutex_lock(&lock_bd);
-                      write_data_base(i);      /* atualiza os dados */
-	         pthread_mutex_unlock(&lock_bd);
+				// Se for a vez dos escritores este lock impede que os leitores façam suas operações
+				pthread_mutex_lock(&lock_eu);
+					pthread_mutex_lock(&lock_bd);
+						write_data_base(i);      /* atualiza os dados */
+					pthread_mutex_unlock(&lock_bd);
+				pthread_mutex_unlock(&lock_eu);
+				// Quando o escritor finaliza sua operação ocorre o unlock e os leitores podem voltar a ler o bd
         }
         pthread_exit(0);
 }
