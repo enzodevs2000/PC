@@ -6,13 +6,38 @@
 #define MA 10 //macacos que andam de A para B
 #define MB 10 //macacos que andam de B para A
 
+pthread_mutex_t lock_corda = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t lock_monkeysA = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t lock_monkeysB = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t lock_turn = PTHREAD_MUTEX_INITIALIZER;
+
+int numberMonkeysA = 0;
+int numberMonkeysB = 0;
+
 void * macacoAB(void * a) {
     int i = *((int *) a);    
     while(1){
          //Procedimentos para acessar a corda
-	printf("Macaco %d passado de A para B \n",i);
-	sleep(1);
-	 //Procedimentos para quando sair da corda
+      pthread_mutex_lock(&lock_turn);
+        pthread_mutex_lock(&lock_monkeysA);
+          numberMonkeysA++;
+        if (numberMonkeysA == 1) {
+          pthread_mutex_lock(&lock_corda);
+        }
+        pthread_mutex_unlock(&lock_monkeysA);
+      pthread_mutex_unlock(&lock_turn);
+        
+        printf("Macaco %d passado de A para B \n",i);
+        printf("Macacos de A na corda %d\n", numberMonkeysA);
+        sleep(1);
+        //Procedimentos para quando sair da corda
+        pthread_mutex_lock(&lock_monkeysA);
+          numberMonkeysA--;
+        if (numberMonkeysA == 0) {
+          pthread_mutex_unlock(&lock_corda);
+        }
+        pthread_mutex_unlock(&lock_monkeysA);
+
     }
     pthread_exit(0);
 }
@@ -21,9 +46,25 @@ void * macacoBA(void * a) {
     int i = *((int *) a);    
     while(1){
          //Procedimentos para acessar a corda
-	printf("Macaco %d passado de B para A \n",i);
-	sleep(1);
-	 //Procedimentos para quando sair da corda
+      pthread_mutex_lock(&lock_turn);
+        pthread_mutex_lock(&lock_monkeysB);
+          numberMonkeysB++;
+        if (numberMonkeysB == 1) {
+          pthread_mutex_lock(&lock_corda);
+        }
+        pthread_mutex_unlock(&lock_monkeysB);
+      pthread_mutex_unlock(&lock_turn);
+      
+        printf("Macaco %d passado de B para A \n",i);
+        printf("Macacos de B na corda %d\n", numberMonkeysB);
+        sleep(1);
+        //Procedimentos para quando sair da corda
+        pthread_mutex_lock(&lock_monkeysB);
+          numberMonkeysB--;
+        if (numberMonkeysB == 0) {
+          pthread_mutex_unlock(&lock_corda);
+        }
+        pthread_mutex_unlock(&lock_monkeysB);
     }
     pthread_exit(0);
 }
@@ -62,7 +103,7 @@ int main(int argc, char * argv[])
         }
     }
     pthread_t g;
-    pthread_create(&g, NULL, &gorila, NULL);
+    //pthread_create(&g, NULL, &gorila, NULL);
 
   
     pthread_join(macacos[0], NULL);
