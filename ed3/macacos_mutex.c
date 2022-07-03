@@ -18,13 +18,15 @@ void * macacoAB(void * a) {
     int i = *((int *) a);    
     while(1){
          //Procedimentos para acessar a corda
+      // Lock que seta a vez para os macacos passarem, seja no sentido AB  ou BA
       pthread_mutex_lock(&lock_turn);
-        pthread_mutex_lock(&lock_monkeysA);
+        pthread_mutex_lock(&lock_monkeysA); // Lock que bloqueia o lado A para podermos fazer as operações
           numberMonkeysA++;
         if (numberMonkeysA == 1) {
-          pthread_mutex_lock(&lock_corda);
+          pthread_mutex_lock(&lock_corda); // Lock que bloqueia a corda só para os macaco no sentido AB
         }
         pthread_mutex_unlock(&lock_monkeysA);
+      
       pthread_mutex_unlock(&lock_turn);
         
         printf("Macaco %d passado de A para B \n",i);
@@ -36,7 +38,7 @@ void * macacoAB(void * a) {
         if (numberMonkeysA == 0) {
           pthread_mutex_unlock(&lock_corda);
         }
-        pthread_mutex_unlock(&lock_monkeysA);
+        pthread_mutex_unlock(&lock_monkeysA); // Comportamento semelhante ao problema dos leitores-escritores
 
     }
     pthread_exit(0);
@@ -46,7 +48,7 @@ void * macacoBA(void * a) {
     int i = *((int *) a);    
     while(1){
          //Procedimentos para acessar a corda
-      pthread_mutex_lock(&lock_turn);
+      pthread_mutex_lock(&lock_turn); // Aqui acontece o mesmo que foi explicado no macacoAB
         pthread_mutex_lock(&lock_monkeysB);
           numberMonkeysB++;
         if (numberMonkeysB == 1) {
@@ -54,6 +56,7 @@ void * macacoBA(void * a) {
         }
         pthread_mutex_unlock(&lock_monkeysB);
       pthread_mutex_unlock(&lock_turn);
+     
       
         printf("Macaco %d passado de B para A \n",i);
         printf("Macacos de B na corda %d\n", numberMonkeysB);
@@ -74,8 +77,12 @@ void * macacoBA(void * a) {
 void * gorila(void * a){
     while(1){
 	//Procedimentos para acessar a corda
-	printf("Gorila passado de A para B \n");
-	sleep(5);
+  pthread_mutex_lock(&lock_turn); // Este lock irá bloquear o acesso para que somente o gorila possa andar pela corda
+    pthread_mutex_lock(&lock_corda);
+  pthread_mutex_unlock(&lock_turn);
+    printf("Gorila passado de A para B \n");
+    sleep(5);
+    pthread_mutex_unlock(&lock_corda);
         //Procedimentos para quando sair da corda
      }
     pthread_exit(0);
@@ -103,7 +110,7 @@ int main(int argc, char * argv[])
         }
     }
     pthread_t g;
-    //pthread_create(&g, NULL, &gorila, NULL);
+    pthread_create(&g, NULL, &gorila, NULL);
 
   
     pthread_join(macacos[0], NULL);
